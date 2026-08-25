@@ -176,19 +176,17 @@
     }
 
     function reproducirVoz(texto, lang, genero) {
-      // Optimización gramatical: Añadir pequeñas pausas utilizando puntuación de soporte en síntesis
       let textoConPausas = texto
-        .replace(/,/g, ', ...')       // Pausa corta en comas
-        .replace(/\./g, '. ......')   // Pausa marcada en puntos
-        .replace(/;/g, '; ...')       // Pausa en punto y coma
-        .replace(/:/g, ': ...');      // Pausa en dos puntos
+        .replace(/,/g, ', ...')       
+        .replace(/\./g, '. ......')   
+        .replace(/;/g, '; ...')       
+        .replace(/:/g, ': ...');      
 
       const utterance = new SpeechSynthesisUtterance(textoConPausas);
       
       const langMap = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-BR', 'it': 'it-IT' };
-      utterance.lang = langMap[lang]</i> || 'en-US';
+      utterance.lang = langMap[lang] || 'en-US';
 
-      // Velocidad dinámica respetando pausas
       if (lang === 'es') {
         utterance.rate = 0.55; 
       } else {
