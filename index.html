@@ -20,34 +20,41 @@
       <span class="text-[10px] text-slate-400 font-mono">v.1 1836</span>
     </div>
     <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
-    <p class="text-xs text-slate-400">Traductor instantáneo para celular</p>
+    <p class="text-xs text-slate-400">Traductor instantáneo con IA</p>
   </header>
 
-  <!-- Controles de Idioma -->
-  <div class="bg-slate-800 p-4 rounded-xl shadow-lg flex justify-between items-center gap-2 max-w-md mx-auto w-full">
-    <div class="flex-1">
-      <label class="block text-xs text-slate-400 mb-1">Hablas:</label>
-      <select id="langOrigen" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
-        <option value="es-ES" selected>Español</option>
-        <option value="en-US">Inglés</option>
-        <option value="fr-FR">Francés</option>
-        <option value="pt-BR">Portugués</option>
-        <option value="it-IT">Italiano</option>
-      </select>
+  <!-- Controles de Configuración y Idioma -->
+  <div class="bg-slate-800 p-4 rounded-xl shadow-lg flex flex-col gap-3 max-w-md mx-auto w-full">
+    <div class="flex justify-between items-center gap-2">
+      <div class="flex-1">
+        <label class="block text-xs text-slate-400 mb-1">Origen:</label>
+        <div class="w-full bg-slate-700/60 text-sm rounded-lg p-2 border border-slate-600 text-cyan-300 font-medium">
+          🔍 Detección Automática
+        </div>
+      </div>
+
+      <div class="pt-5">
+        <span class="text-cyan-400 font-bold">➔</span>
+      </div>
+
+      <div class="flex-1">
+        <label class="block text-xs text-slate-400 mb-1">Traducir a:</label>
+        <select id="langDestino" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
+          <option value="en" selected>Inglés</option>
+          <option value="es">Español</option>
+          <option value="fr">Francés</option>
+          <option value="pt">Portugués</option>
+          <option value="it">Italiano</option>
+        </select>
+      </div>
     </div>
 
-    <div class="pt-5">
-      <span class="text-cyan-400 font-bold">⇄</span>
-    </div>
-
-    <div class="flex-1">
-      <label class="block text-xs text-slate-400 mb-1">Traducir a:</label>
-      <select id="langDestino" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
-        <option value="en" selected>Inglés</option>
-        <option value="es">Español</option>
-        <option value="fr">Francés</option>
-        <option value="pt">Portugués</option>
-        <option value="it">Italiano</option>
+    <!-- Selector de Género de Voz -->
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Tipo de Voz (Lectura):</label>
+      <select id="generoVoz" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
+        <option value="female" selected>👩 Femenina</option>
+        <option value="male">👨 Masculina</option>
       </select>
     </div>
   </div>
@@ -55,7 +62,7 @@
   <!-- Contenedor de Resultados -->
   <div class="max-w-md mx-auto w-full flex-1 flex flex-col justify-center gap-4 my-4">
     <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
-      <span class="text-xs text-slate-400 uppercase tracking-wider">Original:</span>
+      <span class="text-xs text-slate-400 uppercase tracking-wider">Original (Detectado):</span>
       <p id="textoOriginal" class="text-lg text-slate-200 mt-1 min-h-[3rem]">Toca el micrófono y habla...</p>
     </div>
 
@@ -91,15 +98,19 @@
     }
 
     const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    // Permitir detección automática general omitiendo forzar un idioma estricto de entrada
+    recognition.lang = ''; 
+
     const btnHablar = document.getElementById('btnHablar');
     const estadoMic = document.getElementById('estadoMic');
     const textoOriginal = document.getElementById('textoOriginal');
     const textoTraducido = document.getElementById('textoTraducido');
-    const selectOrigen = document.getElementById('langOrigen');
     const selectDestino = document.getElementById('langDestino');
+    const selectGenero = document.getElementById('generoVoz');
 
     btnHablar.addEventListener('click', () => {
-      recognition.lang = selectOrigen.value;
       try {
         recognition.start();
       } catch (e) {
@@ -108,7 +119,7 @@
     });
 
     recognition.onstart = () => {
-      estadoMic.innerText = "Escuchando...";
+      estadoMic.innerText = "Escuchando cualquier idioma...";
       btnHablar.classList.add('bg-red-500', 'shadow-red-500/30');
       btnHablar.classList.remove('bg-cyan-500', 'shadow-cyan-500/30');
     };
@@ -117,9 +128,8 @@
       const texto = event.results[0][0].transcript;
       textoOriginal.innerText = texto;
       
-      const origenShort = selectOrigen.value.split('-')[0];
       const destinoShort = selectDestino.value;
-      const langPair = `${origenShort}|${destinoShort}`;
+      const langPair = `autodetect|${destinoShort}`;
 
       textoTraducido.innerText = "Traduciendo...";
 
@@ -128,11 +138,8 @@
         const data = await response.json();
         const traduccion = data.responseData.translatedText;
         
-        // Muestra el texto de inmediato en pantalla sin esperas
         textoTraducido.innerText = traduccion;
-        
-        // Ejecuta la reproducción de voz en paralelo con velocidad pausada
-        reproducirVoz(traduccion, selectDestino.value);
+        reproducirVoz(traduccion, selectDestino.value, selectGenero.value);
       } catch (error) {
         textoTraducido.innerText = "Error en la traducción.";
       }
@@ -153,11 +160,40 @@
       btnHablar.classList.add('bg-cyan-500', 'shadow-cyan-500/30');
     }
 
-    function reproducirVoz(texto, lang) {
+    function reproducirVoz(texto, lang, genero) {
       const utterance = new SpeechSynthesisUtterance(texto);
-      utterance.lang = lang;
-      utterance.rate = 0.6; // Velocidad muy pausada y clara
+      
+      // Mapeo corto a código de lenguaje extendido para síntesis
+      const langMap = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-BR', 'it': 'it-IT' };
+      utterance.lang = langMap[lang] || 'en-US';
+      utterance.rate = 0.45; // Velocidad sumamente pausada y clara
+
+      const voces = window.speechSynthesis.getVoices();
+      if (voces.length > 0) {
+        // Filtrar por idioma destino
+        const vocesIdioma = voces.filter(v => v.lang.startsWith(lang));
+        let vozSeleccionada = null;
+
+        if (genero === 'female') {
+          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('helena') || v.name.toLowerCase().includes('victoria'));
+        } else {
+          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('pablo') || v.name.toLowerCase().includes('george'));
+        }
+
+        // Si encuentra coincidencia la asigna, de lo contrario usa la primera disponible para el idioma
+        if (vozSeleccionada) {
+          utterance.voice = vozSeleccionada;
+        } else if (vocesIdioma.length > 0) {
+          utterance.voice = vocesIdioma[0];
+        }
+      }
+
       window.speechSynthesis.speak(utterance);
+    }
+
+    // Cargar voces anticipadamente si el navegador lo requiere
+    if (typeof window.speechSynthesis !== 'undefined' && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
     }
   </script>
 </body>
