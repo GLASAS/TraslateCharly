@@ -17,7 +17,7 @@
         ⏳ Cargando app...
       </span>
       <!-- Versión del Software -->
-      <span class="text-[10px] text-slate-400 font-mono">v1.2.0 - Stable</span>
+      <span class="text-[10px] text-slate-400 font-mono">v.1 1836</span>
     </div>
     <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
     <p class="text-xs text-slate-400">Traductor instantáneo para celular</p>
@@ -60,7 +60,7 @@
     </div>
 
     <div class="bg-slate-800/80 p-4 rounded-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
-      <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción:</span>
+      <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción inmediata:</span>
       <p id="textoTraducido" class="text-xl text-cyan-200 mt-1 min-h-[3rem] font-medium">...</p>
     </div>
   </div>
@@ -128,7 +128,10 @@
         const data = await response.json();
         const traduccion = data.responseData.translatedText;
         
+        // Muestra el texto de inmediato en pantalla sin esperas
         textoTraducido.innerText = traduccion;
+        
+        // Ejecuta la reproducción de voz en paralelo con velocidad pausada
         reproducirVoz(traduccion, selectDestino.value);
       } catch (error) {
         textoTraducido.innerText = "Error en la traducción.";
@@ -153,7 +156,7 @@
     function reproducirVoz(texto, lang) {
       const utterance = new SpeechSynthesisUtterance(texto);
       utterance.lang = lang;
-      utterance.rate = 0.8; // Velocidad pausada y natural
+      utterance.rate = 0.6; // Velocidad muy pausada y clara
       window.speechSynthesis.speak(utterance);
     }
   </script>
