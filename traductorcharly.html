@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Traductor de Voz en Tiempo Real</title>
+  <!-- Tailwind CSS para diseño moderno -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between p-4">
+
+  <!-- Encabezado -->
+  <header class="text-center py-4">
+    <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
+    <p class="text-xs text-slate-400">Traductor instantáneo para celular</p>
+  </header>
+
+  <!-- Controles de Idioma -->
+  <div class="bg-slate-800 p-4 rounded-xl shadow-lg flex justify-between items-center gap-2 max-w-md mx-auto w-full">
+    <div class="flex-1">
+      <label class="block text-xs text-slate-400 mb-1">Hablas:</label>
+      <select id="langOrigen" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
+        <option value="es-ES" selected>Español</option>
+        <option value="en-US">Inglés</option>
+        <option value="fr-FR">Francés</option>
+        <option value="pt-BR">Portugués</option>
+        <option value="it-IT">Italiano</option>
+      </select>
+    </div>
+
+    <div class="pt-5">
+      <span class="text-cyan-400 font-bold">⇄</span>
+    </div>
+
+    <div class="flex-1">
+      <label class="block text-xs text-slate-400 mb-1">Traducir a:</label>
+      <select id="langDestino" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
+        <option value="en" selected>Inglés</option>
+        <option value="es">Español</option>
+        <option value="fr">Francés</option>
+        <option value="pt">Portugués</option>
+        <option value="it">Italiano</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Contenedor de Resultados -->
+  <div class="max-w-md mx-auto w-full flex-1 flex flex-col justify-center gap-4 my-4">
+    <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
+      <span class="text-xs text-slate-400 uppercase tracking-wider">Original:</span>
+      <p id="textoOriginal" class="text-lg text-slate-200 mt-1 min-h-[3rem]">Toca el micrófono y habla...</p>
+    </div>
+
+    <div class="bg-slate-800/80 p-4 rounded-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
+      <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción:</span>
+      <p id="textoTraducido" class="text-xl text-cyan-200 mt-1 min-h-[3rem] font-medium">...</p>
+    </div>
+  </div>
+
+  <!-- Botón de Micrófono Principal -->
+  <div class="text-center py-6">
+    <button id="btnHablar" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold p-6 rounded-full shadow-lg shadow-cyan-500/30 transition transform active:scale-95 focus:outline-none">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+      </svg>
+    </button>
+    <p id="estadoMic" class="text-xs text-slate-400 mt-3">Presiona para hablar</p>
+  </div>
+
+  <!-- Lógica de la Aplicación -->
+  <script>
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      alert("Tu navegador no soporta reconocimiento de voz. Usa Google Chrome en Android o Safari en iOS.");
+    }
+
+    const recognition = new SpeechRecognition();
+    const btnHablar = document.getElementById('btnHablar');
+    const estadoMic = document.getElementById('estadoMic');
+    const textoOriginal = document.getElementById('textoOriginal');
+    const textoTraducido = document.getElementById('textoTraducido');
+    const selectOrigen = document.getElementById('langOrigen');
+    const selectDestino = document.getElementById('langDestino');
+
+    btnHablar.addEventListener('click', () => {
+      recognition.lang = selectOrigen.value;
+      try {
+        recognition.start();
+      } catch (e) {
+        recognition.stop();
+      }
+    });
+
+    recognition.onstart = () => {
+      estadoMic.innerText = "Escuchando...";
+      btnHablar.classList.add('bg-red-500', 'shadow-red-500/30');
+      btnHablar.classList.remove('bg-cyan-500', 'shadow-cyan-500/30');
+    };
+
+    recognition.onresult = async (event) => {
+      const texto = event.results[0][0].transcript;
+      textoOriginal.innerText = texto;
+      
+      const origenShort = selectOrigen.value.split('-')[0];
+      const destinoShort = selectDestino.value;
+      const langPair = `${origenShort}|${destinoShort}`;
+
+      textoTraducido.innerText = "Traduciendo...";
+
+      try {
+        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${langPair}`);
+        const data = await response.json();
+        const traduccion = data.responseData.translatedText;
+        
+        textoTraducido.innerText = traduccion;
+        reproducirVoz(traduccion, selectDestino.value);
+      } catch (error) {
+        textoTraducido.innerText = "Error en la traducción.";
+      }
+    };
+
+    recognition.onerror = () => {
+      estadoMic.innerText = "No se pudo reconocer el audio. Intenta de nuevo.";
+      resetUI();
+    };
+
+    recognition.onend = () => {
+      resetUI();
+    };
+
+    function resetUI() {
+      estadoMic.innerText = "Presiona para hablar";
+      btnHablar.classList.remove('bg-red-500', 'shadow-red-500/30');
+      btnHablar.classList.add('bg-cyan-500', 'shadow-cyan-500/30');
+    }
+
+    function reproducirVoz(texto, lang) {
+      const utterance = new SpeechSynthesisUtterance(texto);
+      utterance.lang = lang;
+      window.speechSynthesis.speak(utterance);
+    }
+  </script>
+</body>
+</html>
