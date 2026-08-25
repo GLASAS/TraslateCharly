@@ -9,15 +9,15 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between p-4">
 
-  <!-- Encabezado con Versión e Indicador de Carga -->
+  <!-- Encabezado con Versión Dinámica (Hora Actual) e Indicador de Carga -->
   <header class="text-center py-4">
     <div class="flex justify-between items-center max-w-md mx-auto px-2 mb-2">
       <!-- Indicador de Carga -->
       <span id="estadoCarga" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium">
         ⏳ Cargando app...
       </span>
-      <!-- Versión del Software -->
-      <span class="text-[10px] text-slate-400 font-mono">v.1 1840</span>
+      <!-- Versión Dinámica basada en la Hora -->
+      <span id="versionApp" class="text-[10px] text-slate-400 font-mono">v.1 --:--</span>
     </div>
     <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
     <p class="text-xs text-slate-400">Traductor instantáneo con IA</p>
@@ -84,8 +84,15 @@
 
   <!-- Lógica de la Aplicación -->
   <script>
-    // Notificar al cargar completamente la interfaz y componentes
+    // Inicialización al cargar la página: Versión dinámica por hora e indicador de sistema listo
     window.addEventListener('DOMContentLoaded', () => {
+      // Generar versión basada en la hora actual (ej. v.1 1844)
+      const ahora = new Date();
+      const horas = String(ahora.getHours()).padStart(2, '0');
+      const minutos = String(ahora.getMinutes()).padStart(2, '0');
+      document.getElementById('versionApp').innerText = `v.1 ${horas}${minutos}`;
+
+      // Cambiar estado de carga
       const etiquetaCarga = document.getElementById('estadoCarga');
       etiquetaCarga.className = "text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-medium";
       etiquetaCarga.innerText = "🟢 Sistema Listo";
@@ -100,7 +107,6 @@
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
     recognition.interimResults = false;
-    // Permitir detección automática general omitiendo forzar un idioma estricto de entrada
     recognition.lang = ''; 
 
     const btnHablar = document.getElementById('btnHablar');
@@ -163,14 +169,18 @@
     function reproducirVoz(texto, lang, genero) {
       const utterance = new SpeechSynthesisUtterance(texto);
       
-      // Mapeo corto a código de lenguaje extendido para síntesis
       const langMap = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-BR', 'it': 'it-IT' };
       utterance.lang = langMap[lang] || 'en-US';
-      utterance.rate = 0.45; // Velocidad sumamente pausada y clara
+
+      // Velocidad dinámica: 0.6 para español, 0.45 para otros idiomas
+      if (lang === 'es') {
+        utterance.rate = 0.6; 
+      } else {
+        utterance.rate = 0.45; 
+      }
 
       const voces = window.speechSynthesis.getVoices();
       if (voces.length > 0) {
-        // Filtrar por idioma destino
         const vocesIdioma = voces.filter(v => v.lang.startsWith(lang));
         let vozSeleccionada = null;
 
@@ -180,7 +190,6 @@
           vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('pablo') || v.name.toLowerCase().includes('george'));
         }
 
-        // Si encuentra coincidencia la asigna, de lo contrario usa la primera disponible para el idioma
         if (vozSeleccionada) {
           utterance.voice = vozSeleccionada;
         } else if (vocesIdioma.length > 0) {
@@ -191,7 +200,6 @@
       window.speechSynthesis.speak(utterance);
     }
 
-    // Cargar voces anticipadamente si el navegador lo requiere
     if (typeof window.speechSynthesis !== 'undefined' && window.speechSynthesis.onvoiceschanged !== undefined) {
       window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
     }
