@@ -9,18 +9,18 @@
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between p-4">
 
-  <!-- Encabezado con Versión Dinámica (Hora Actual) e Indicador de Carga -->
+  <!-- Encabezado con Versión Fija de Actualización e Indicador de Carga -->
   <header class="text-center py-4">
     <div class="flex justify-between items-center max-w-md mx-auto px-2 mb-2">
       <!-- Indicador de Carga -->
       <span id="estadoCarga" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium">
         ⏳ Cargando app...
       </span>
-      <!-- Versión Dinámica basada en la Hora -->
-      <span id="versionApp" class="text-[10px] text-slate-400 font-mono">v.1 --:--</span>
+      <!-- Versión Fija basada en la hora de actualización -->
+      <span class="text-[10px] text-slate-400 font-mono">v.1 1851</span>
     </div>
     <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
-    <p class="text-xs text-slate-400">Traductor instantáneo con IA</p>
+    <p class="text-xs text-slate-400">Traductor simultáneo con pausas gramaticales</p>
   </header>
 
   <!-- Controles de Configuración y Idioma -->
@@ -62,12 +62,12 @@
   <!-- Contenedor de Resultados -->
   <div class="max-w-md mx-auto w-full flex-1 flex flex-col justify-center gap-4 my-4">
     <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
-      <span class="text-xs text-slate-400 uppercase tracking-wider">Original (Detectado):</span>
+      <span class="text-xs text-slate-400 uppercase tracking-wider">Original (En vivo):</span>
       <p id="textoOriginal" class="text-lg text-slate-200 mt-1 min-h-[3rem]">Toca el micrófono y habla...</p>
     </div>
 
     <div class="bg-slate-800/80 p-4 rounded-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
-      <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción inmediata:</span>
+      <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción simultánea (*insofacto*):</span>
       <p id="textoTraducido" class="text-xl text-cyan-200 mt-1 min-h-[3rem] font-medium">...</p>
     </div>
   </div>
@@ -84,15 +84,7 @@
 
   <!-- Lógica de la Aplicación -->
   <script>
-    // Inicialización al cargar la página: Versión dinámica por hora e indicador de sistema listo
     window.addEventListener('DOMContentLoaded', () => {
-      // Generar versión basada en la hora actual (ej. v.1 1844)
-      const ahora = new Date();
-      const horas = String(ahora.getHours()).padStart(2, '0');
-      const minutos = String(ahora.getMinutes()).padStart(2, '0');
-      document.getElementById('versionApp').innerText = `v.1 ${horas}${minutos}`;
-
-      // Cambiar estado de carga
       const etiquetaCarga = document.getElementById('estadoCarga');
       etiquetaCarga.className = "text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-medium";
       etiquetaCarga.innerText = "🟢 Sistema Listo";
@@ -106,7 +98,7 @@
 
     const recognition = new SpeechRecognition();
     recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.interimResults = true; 
     recognition.lang = ''; 
 
     const btnHablar = document.getElementById('btnHablar');
@@ -115,6 +107,8 @@
     const textoTraducido = document.getElementById('textoTraducido');
     const selectDestino = document.getElementById('langDestino');
     const selectGenero = document.getElementById('generoVoz');
+
+    let ultimoTextoTraducido = "";
 
     btnHablar.addEventListener('click', () => {
       try {
@@ -125,34 +119,49 @@
     });
 
     recognition.onstart = () => {
-      estadoMic.innerText = "Escuchando cualquier idioma...";
+      estadoMic.innerText = "Escuchando en vivo...";
       btnHablar.classList.add('bg-red-500', 'shadow-red-500/30');
       btnHablar.classList.remove('bg-cyan-500', 'shadow-cyan-500/30');
     };
 
     recognition.onresult = async (event) => {
-      const texto = event.results[0][0].transcript;
-      textoOriginal.innerText = texto;
+      let textoInterim = "";
+      let textoFinal = "";
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          textoFinal += event.results[i][0].transcript;
+        } else {
+          textoInterim += event.results[i][0].transcript;
+        }
+      }
+
+      const textoEnVivo = textoFinal || textoInterim;
+      textoOriginal.innerText = textoEnVivo;
       
+      if (!textoEnVivo.trim()) return;
+
       const destinoShort = selectDestino.value;
       const langPair = `autodetect|${destinoShort}`;
 
-      textoTraducido.innerText = "Traduciendo...";
-
       try {
-        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${langPair}`);
+        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textoEnVivo)}&langpair=${langPair}`);
         const data = await response.json();
         const traduccion = data.responseData.translatedText;
         
         textoTraducido.innerText = traduccion;
-        reproducirVoz(traduccion, selectDestino.value, selectGenero.value);
+
+        if (textoFinal && traduccion !== ultimoTextoTraducido) {
+          ultimoTextoTraducido = traduccion;
+          reproducirVoz(traduccion, selectDestino.value, selectGenero.value);
+        }
       } catch (error) {
-        textoTraducido.innerText = "Error en la traducción.";
+        textoTraducido.innerText = "Traduciendo en vivo...";
       }
     };
 
     recognition.onerror = () => {
-      estadoMic.innerText = "No se pudo reconocer el audio. Intenta de nuevo.";
+      estadoMic.innerText = "Intenta de nuevo.";
       resetUI();
     };
 
@@ -167,16 +176,23 @@
     }
 
     function reproducirVoz(texto, lang, genero) {
-      const utterance = new SpeechSynthesisUtterance(texto);
+      // Optimización gramatical: Añadir pequeñas pausas utilizando puntuación de soporte en síntesis
+      let textoConPausas = texto
+        .replace(/,/g, ', ...')       // Pausa corta en comas
+        .replace(/\./g, '. ......')   // Pausa marcada en puntos
+        .replace(/;/g, '; ...')       // Pausa en punto y coma
+        .replace(/:/g, ': ...');      // Pausa en dos puntos
+
+      const utterance = new SpeechSynthesisUtterance(textoConPausas);
       
       const langMap = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-BR', 'it': 'it-IT' };
-      utterance.lang = langMap[lang] || 'en-US';
+      utterance.lang = langMap[lang]</i> || 'en-US';
 
-      // Velocidad dinámica: 0.6 para español, 0.45 para otros idiomas
+      // Velocidad dinámica respetando pausas
       if (lang === 'es') {
-        utterance.rate = 0.6; 
+        utterance.rate = 0.55; 
       } else {
-        utterance.rate = 0.45; 
+        utterance.rate = 0.40; 
       }
 
       const voces = window.speechSynthesis.getVoices();
