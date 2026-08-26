@@ -4,26 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Traductor de Voz en Tiempo Real</title>
-  <!-- Tailwind CSS para diseño moderno -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between p-4">
 
-  <!-- Encabezado con Versión Fija de Actualización e Indicador de Carga -->
   <header class="text-center py-4">
     <div class="flex justify-between items-center max-w-md mx-auto px-2 mb-2">
-      <!-- Indicador de Carga -->
       <span id="estadoCarga" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium">
         ⏳ Cargando app...
       </span>
-      <!-- Versión Fija basada en la hora de actualización -->
-      <span class="text-[10px] text-slate-400 font-mono">v.1 1851</span>
+      <span class="text-[10px] text-slate-400 font-mono">v.1 1910</span>
     </div>
     <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
     <p class="text-xs text-slate-400">Traductor simultáneo ultra-rápido</p>
   </header>
 
-  <!-- Controles de Configuración y Idioma -->
   <div class="bg-slate-800 p-4 rounded-xl shadow-lg flex flex-col gap-3 max-w-md mx-auto w-full">
     <div class="flex justify-between items-center gap-2">
       <div class="flex-1">
@@ -49,7 +44,6 @@
       </div>
     </div>
 
-    <!-- Selector de Género de Voz -->
     <div>
       <label class="block text-xs text-slate-400 mb-1">Tipo de Voz (Lectura):</label>
       <select id="generoVoz" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
@@ -59,7 +53,6 @@
     </div>
   </div>
 
-  <!-- Contenedor de Resultados -->
   <div class="max-w-md mx-auto w-full flex-1 flex flex-col justify-center gap-4 my-4">
     <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
       <span class="text-xs text-slate-400 uppercase tracking-wider">Original (En vivo):</span>
@@ -72,7 +65,6 @@
     </div>
   </div>
 
-  <!-- Botón de Micrófono Principal -->
   <div class="text-center py-6">
     <button id="btnHablar" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold p-6 rounded-full shadow-lg shadow-cyan-500/30 transition transform active:scale-95 focus:outline-none">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -82,7 +74,6 @@
     <p id="estadoMic" class="text-xs text-slate-400 mt-3">Presiona para hablar</p>
   </div>
 
-  <!-- Lógica de la Aplicación -->
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const etiquetaCarga = document.getElementById('estadoCarga');
@@ -97,8 +88,8 @@
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true; // Mantiene el micrófono abierto de forma continua para charlas o canciones
-    recognition.interimResults = true; 
+    recognition.continuous = true; // Permite escucha continua sin interrupciones
+    recognition.interimResults = true; // Traducción y texto insofacto en vivo
     recognition.lang = ''; 
 
     const btnHablar = document.getElementById('btnHablar');
@@ -157,7 +148,7 @@
         
         textoTraducido.innerText = traduccion;
 
-        // Dispara la voz de manera inmediata al haber cambios consistentes en la traducción
+        // Dispara la voz de manera inmediata al haber cambios consistentes
         if (traduccion && traduccion !== ultimoTextoTraducido && traduccion.length > 2) {
           ultimoTextoTraducido = traduccion;
           reproducirVoz(traduccion, selectDestino.value, selectGenero.value);
@@ -185,9 +176,10 @@
     }
 
     function reproducirVoz(texto, lang, genero) {
-      // Limpia cualquier audio anterior para evitar retrasos acumulados en tiempo real
+      // Limpieza inmediata de audio anterior para garantizar latencia cero
       window.speechSynthesis.cancel();
 
+      // Inserción de micro-pausas gramaticales para conferencias y canciones
       let textoConPausas = texto
         .replace(/,/g, ', ...')       
         .replace(/\./g, '. ......')   
@@ -199,6 +191,7 @@
       const langMap = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-BR', 'it': 'it-IT' };
       utterance.lang = langMap[lang] || 'en-US';
 
+      // Velocidad dinámica: 0.55 para español, 0.40 pausada para otros idiomas
       if (lang === 'es') {
         utterance.rate = 0.55; 
       } else {
