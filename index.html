@@ -3,27 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Traductor de Voz en Tiempo Real</title>
-  <!-- Tailwind CSS para diseño moderno -->
+  <title>Traductor de Voz con Altavoz</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between p-4">
 
-  <!-- Encabezado con Versión Fija de Actualización e Indicador de Carga -->
   <header class="text-center py-4">
     <div class="flex justify-between items-center max-w-md mx-auto px-2 mb-2">
-      <!-- Indicador de Carga -->
       <span id="estadoCarga" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium">
         ⏳ Cargando app...
       </span>
-      <!-- Versión Fija basada en la hora de actualización -->
-      <span class="text-[10px] text-slate-400 font-mono">v.1 1925</span>
+      <span class="text-[10px] text-slate-400 font-mono">v.1 1928</span>
     </div>
     <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
-    <p class="text-xs text-slate-400">Traductor simultáneo en texto</p>
+    <p class="text-xs text-slate-400">Traducción manual y altavoz</p>
   </header>
 
-  <!-- Controles de Configuración y Idioma -->
   <div class="bg-slate-800 p-4 rounded-xl shadow-lg flex flex-col gap-3 max-w-md mx-auto w-full">
     <div class="flex justify-between items-center gap-2">
       <div class="flex-1">
@@ -48,22 +43,33 @@
         </select>
       </div>
     </div>
+
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Tipo de Voz (Altavoz):</label>
+      <select id="generoVoz" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
+        <option value="female" selected>👩 Femenina</option>
+        <option value="male">👨 Masculina</option>
+      </select>
+    </div>
   </div>
 
-  <!-- Contenedor de Resultados -->
   <div class="max-w-md mx-auto w-full flex-1 flex flex-col justify-center gap-4 my-4">
     <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
-      <span class="text-xs text-slate-400 uppercase tracking-wider">Original (En vivo):</span>
+      <span class="text-xs text-slate-400 uppercase tracking-wider">Original:</span>
       <p id="textoOriginal" class="text-lg text-slate-200 mt-1 min-h-[3rem]">Toca el micrófono y habla...</p>
     </div>
 
-    <div class="bg-slate-800/80 p-4 rounded-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
-      <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción inmediata (*insofacto*):</span>
-      <p id="textoTraducido" class="text-xl text-cyan-200 mt-1 min-h-[3rem] font-medium">...</p>
+    <div class="bg-slate-800/80 p-4 rounded-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10 relative">
+      <div class="flex justify-between items-center">
+        <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción:</span>
+        <button id="btnAltavoz" class="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition">
+          🔊 Escuchar en Altavoz
+        </button>
+      </div>
+      <p id="textoTraducido" class="text-xl text-cyan-200 mt-2 min-h-[3rem] font-medium">...</p>
     </div>
   </div>
 
-  <!-- Botón de Micrófono Principal -->
   <div class="text-center py-6">
     <button id="btnHablar" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold p-6 rounded-full shadow-lg shadow-cyan-500/30 transition transform active:scale-95 focus:outline-none">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -73,7 +79,6 @@
     <p id="estadoMic" class="text-xs text-slate-400 mt-3">Presiona para hablar</p>
   </div>
 
-  <!-- Lógica de la Aplicación -->
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const etiquetaCarga = document.getElementById('estadoCarga');
@@ -88,67 +93,47 @@
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = true; 
-    recognition.interimResults = true; 
+    recognition.continuous = false; // Traduce por bloques o frases exactas
+    recognition.interimResults = false; 
     recognition.lang = ''; 
 
     const btnHablar = document.getElementById('btnHablar');
+    const btnAltavoz = document.getElementById('btnAltavoz');
     const estadoMic = document.getElementById('estadoMic');
     const textoOriginal = document.getElementById('textoOriginal');
     const textoTraducido = document.getElementById('textoTraducido');
     const selectDestino = document.getElementById('langDestino');
+    const selectGenero = document.getElementById('generoVoz');
 
-    let isListening = false;
-    let translationTimeout = null;
+    let ultimaTraduccionCache = "";
 
     btnHablar.addEventListener('click', () => {
       try {
-        if (!isListening) {
-          recognition.start();
-        } else {
-          recognition.stop();
-        }
+        recognition.start();
       } catch (e) {
         recognition.stop();
       }
     });
 
     recognition.onstart = () => {
-      isListening = true;
-      estadoMic.innerText = "Escuchando en vivo (Toca para detener)...";
+      estadoMic.innerText = "Escuchando...";
       btnHablar.classList.add('bg-red-500', 'shadow-red-500/30');
       btnHablar.classList.remove('bg-cyan-500', 'shadow-cyan-500/30');
     };
 
-    recognition.onresult = (event) => {
-      let textoInterim = "";
-      let textoFinal = "";
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          textoFinal += event.results[i][0].transcript;
-        } else {
-          textoInterim += event.results[i][0].transcript;
-        }
-      }
-
-      const textoEnVivo = textoFinal || textoInterim;
-      textoOriginal.innerText = textoEnVivo;
+    recognition.onresult = async (event) => {
+      const texto = event.results[0][0].transcript;
+      textoOriginal.innerText = texto;
       
-      if (!textoEnVivo.trim()) return;
+      if (!texto.trim()) return;
 
-      clearTimeout(translationTimeout);
-      translationTimeout = setTimeout(() => {
-        ejecutarTraduccion(textoEnVivo);
-      }, 250);
-    };
-
-    async function ejecutarTraduccion(textoEnVivo) {
       const destinoShort = selectDestino.value;
       const langPair = `autodetect|${destinoShort}`;
 
+      textoTraducido.innerText = "Traduciendo...";
+
       try {
-        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(textoEnVivo)}&langpair=${langPair}`);
+        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${langPair}`);
         const data = await response.json();
         
         if (data.responseStatus === 429 || (data.responseData && data.responseData.translatedText && data.responseData.translatedText.includes("MYMEMORY WARNING"))) {
@@ -158,10 +143,11 @@
 
         const traduccion = data.responseData.translatedText;
         textoTraducido.innerText = traduccion;
+        ultimaTraduccionCache = traduccion; // Guarda la traducción para reproducirla cuando desees
       } catch (error) {
-        textoTraducido.innerText = "Traduciendo insofacto...";
+        textoTraducido.innerText = "Error en la traducción.";
       }
-    }
+    };
 
     recognition.onerror = () => {
       estadoMic.innerText = "Intenta de nuevo.";
@@ -169,15 +155,71 @@
     };
 
     recognition.onend = () => {
-      isListening = false;
       resetUI();
     };
 
     function resetUI() {
-      isListening = false;
       estadoMic.innerText = "Presiona para hablar";
       btnHablar.classList.remove('bg-red-500', 'shadow-red-500/30');
       btnHablar.classList.add('bg-cyan-500', 'shadow-cyan-500/30');
+    }
+
+    // Botón manual de altavoz
+    btnAltavoz.addEventListener('click', () => {
+      if (ultimaTraduccionCache) {
+        reproducirVozAltavoz(ultimaTraduccionCache, selectDestino.value, selectGenero.value);
+      } else {
+        alert("Primero realiza una traducción presionando el micrófono.");
+      }
+    });
+
+    function reproducirVoz(texto, lang, genero) {
+      // Función interna de respaldo
+    }
+
+    function reproducirVozAltavoz(texto, lang, genero) {
+      window.speechSynthesis.cancel();
+
+      let textoConPausas = texto
+        .replace(/,/g, ', ...')       
+        .replace(/\./g, '. ......')   
+        .replace(/;/g, '; ...')       
+        .replace(/:/g, ': ...');      
+
+      const utterance = new SpeechSynthesisUtterance(textoConPausas);
+      
+      const langMap = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-BR', 'it': 'it-IT' };
+      utterance.lang = langMap[lang] || 'en-US';
+
+      if (lang === 'es') {
+        utterance.rate = 0.6; 
+      } else {
+        utterance.rate = 0.45; 
+      }
+
+      const voces = window.speechSynthesis.getVoices();
+      if (voces.length > 0) {
+        const vocesIdioma = voces.filter(v => v.lang.startsWith(lang));
+        let vozSeleccionada = null;
+
+        if (genero === 'female') {
+          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('helena') || v.name.toLowerCase().includes('victoria'));
+        } else {
+          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('pablo') || v.name.toLowerCase().includes('george'));
+        }
+
+        if (vozSeleccionada) {
+          utterance.voice = vozSeleccionada;
+        } else if (vocesIdioma.length > 0) {
+          utterance.voice = vocesIdioma[0];
+        }
+      }
+
+      window.speechSynthesis.speak(utterance);
+    }
+
+    if (typeof window.speechSynthesis !== 'undefined' && window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
     }
   </script>
 </body>
