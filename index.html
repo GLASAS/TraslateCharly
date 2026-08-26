@@ -3,27 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Traductor de Voz con Altavoz</title>
-  <!-- Tailwind CSS para diseño moderno -->
+  <title>Traductor Profesional Multi-API</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between p-4">
 
-  <!-- Encabezado con Versión Fija de Actualización e Indicador de Carga -->
   <header class="text-center py-4">
     <div class="flex justify-between items-center max-w-md mx-auto px-2 mb-2">
-      <!-- Indicador de Carga -->
       <span id="estadoCarga" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium">
         ⏳ Cargando app...
       </span>
-      <!-- Versión Fija basada en la hora de actualización -->
-      <span class="text-[10px] text-slate-400 font-mono">v.1 1939</span>
+      <span class="text-[10px] text-slate-400 font-mono">v.1 2010</span>
     </div>
-    <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
-    <p class="text-xs text-slate-400">Traducción exacta y altavoz</p>
+    <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Pro</h1>
+    <p class="text-xs text-slate-400">Traducción robusta multi-motor</p>
   </header>
 
-  <!-- Controles de Configuración y Idioma -->
   <div class="bg-slate-800 p-4 rounded-xl shadow-lg flex flex-col gap-3 max-w-md mx-auto w-full">
     <div class="flex justify-between items-center gap-2">
       <div class="flex-1">
@@ -49,7 +44,6 @@
       </div>
     </div>
 
-    <!-- Selector de Género de Voz para el Altavoz -->
     <div>
       <label class="block text-xs text-slate-400 mb-1">Tipo de Voz (Altavoz):</label>
       <select id="generoVoz" class="w-full bg-slate-700 text-sm rounded-lg p-2 border border-slate-600 focus:outline-none focus:border-cyan-400">
@@ -59,7 +53,6 @@
     </div>
   </div>
 
-  <!-- Contenedor de Resultados -->
   <div class="max-w-md mx-auto w-full flex-1 flex flex-col justify-center gap-4 my-4">
     <div class="bg-slate-800/60 p-4 rounded-xl border border-slate-700">
       <span class="text-xs text-slate-400 uppercase tracking-wider">Original:</span>
@@ -69,7 +62,6 @@
     <div class="bg-slate-800/80 p-4 rounded-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10 relative">
       <div class="flex justify-between items-center">
         <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción:</span>
-        <!-- Botón Dedicado para el Altavoz -->
         <button id="btnAltavoz" class="bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1 transition">
           🔊 Escuchar en Altavoz
         </button>
@@ -78,7 +70,6 @@
     </div>
   </div>
 
-  <!-- Botón de Micrófono Principal -->
   <div class="text-center py-6">
     <button id="btnHablar" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold p-6 rounded-full shadow-lg shadow-cyan-500/30 transition transform active:scale-95 focus:outline-none">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -88,12 +79,11 @@
     <p id="estadoMic" class="text-xs text-slate-400 mt-3">Presiona para hablar</p>
   </div>
 
-  <!-- Lógica de la Aplicación -->
   <script>
     window.addEventListener('DOMContentLoaded', () => {
       const etiquetaCarga = document.getElementById('estadoCarga');
       etiquetaCarga.className = "text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-medium";
-      etiquetaCarga.innerText = "🟢 Sistema Listo";
+      etiquetaCarga.innerText = "🟢 Sistema Multi-API Listo";
     });
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -105,7 +95,7 @@
     const recognition = new SpeechRecognition();
     recognition.continuous = false; 
     recognition.interimResults = false; 
-    recognition.lang = 'es-ES'; // Forzar origen en español para capturar correctamente
+    recognition.lang = 'es-ES'; 
 
     const btnHablar = document.getElementById('btnHablar');
     const btnAltavoz = document.getElementById('btnAltavoz');
@@ -138,26 +128,61 @@
       if (!texto.trim()) return;
 
       const destino = selectDestino.value;
-      const langPair = `es|${destino}`; // Par exacto Español -> Destino seleccionado
-
       textoTraducido.innerText = "Traduciendo...";
 
-      try {
-        const response = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${langPair}`);
-        const data = await response.json();
-        
-        if (data.responseStatus === 429 || (data.responseData && data.responseData.translatedText && data.responseData.translatedText.includes("MYMEMORY WARNING"))) {
-          textoTraducido.innerText = "⚠️ Límite diario de API alcanzado. Intenta más tarde.";
-          return;
-        }
-
-        const traduccion = data.responseData.translatedText;
-        textoTraducido.innerText = traduccion;
-        ultimaTraduccionCache = traduccion; 
-      } catch (error) {
-        textoTraducido.innerText = "Error en la traducción.";
-      }
+      // Estrategia Multi-API con Respaldo Automático (Failover)
+      let traduccionExito = await traducirConRespaldo(texto, 'es', destino);
+      textoTraducido.innerText = traduccionExito;
+      ultimaTraduccionCache = traduccionExito;
     };
+
+    // Función Inteligente con Múltiples Motores Gratuitos
+    async function traducirConRespaldo(texto, origen, destino) {
+      // Intento 1: LibreTranslate (Instancia pública abierta)
+      try {
+        const res1 = await fetch("https://libretranslate.de/translate", {
+          method: "POST",
+          body: JSON.stringify({ q: texto, source: origen, target: destino, format: "text" }),
+          headers: { "Content-Type": "application/json" }
+        });
+        const data1 = await res1.json();
+        if (data1 && data1.translatedText) {
+          return data1.translatedText;
+        }
+      } catch (e) {
+        // Si falla la primera, pasa al respaldo
+      }
+
+      // Intento 2: MyMemory (Como respaldo secundario)
+      try {
+        const res2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${origen}|${destino}`);
+        const data2 = await res2.json();
+        if (data2 && data2.responseData && data2.responseData.translatedText) {
+          const t = data2.responseData.translatedText;
+          if (!t.includes("MYMEMORY WARNING")) {
+            return t;
+          }
+        }
+      } catch (e) {
+        // Falla el respaldo secundario
+      }
+
+      // Intento 3: Diccionario de emergencia local integrado por si ambos fallan o no hay red
+      return traducirOfflineEmergencia(texto, destino);
+    }
+
+    function traducirOfflineEmergencia(texto, idiomaDestino) {
+      const t = texto.toLowerCase().trim();
+      const diccionario = {
+        'en': { 'hola': 'Hello', 'cómo estás': 'How are you?', 'gracias': 'Thank you', 'por favor': 'Please', 'buenos días': 'Good morning' },
+        'fr': { 'hola': 'Bonjour', 'gracias': 'Merci', 'por favor': 'S\'il vous plaît' },
+        'pt': { 'hola': 'Olá', 'gracias': 'Obrigado', 'por favor': 'Por favor' }
+      };
+      if (diccionario[idiomaDestino] && diccionario[idiomaDestino][t]) {
+        return diccionario[idiomaDestino][t];
+      }
+      return `[Modo Offline/Límite] ${texto}`;
+    }
 
     recognition.onerror = () => {
       estadoMic.innerText = "Intenta de nuevo.";
@@ -169,6 +194,7 @@
     };
 
     function resetUI() {
+      isListening = false;
       estadoMic.innerText = "Presiona para hablar";
       btnHablar.classList.remove('bg-red-500', 'shadow-red-500/30');
       btnHablar.classList.add('bg-cyan-500', 'shadow-cyan-500/30');
@@ -195,12 +221,7 @@
       
       const langMap = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-BR', 'it': 'it-IT' };
       utterance.lang = langMap[lang] || 'en-US';
-
-      if (lang === 'es') {
-        utterance.rate = 0.6; 
-      } else {
-        utterance.rate = 0.45; 
-      }
+      utterance.rate = (lang === 'es') ? 0.6 : 0.45;
 
       const voces = window.speechSynthesis.getVoices();
       if (voces.length > 0) {
@@ -208,9 +229,9 @@
         let vozSeleccionada = null;
 
         if (genero === 'female') {
-          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('helena'));
+          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('google'));
         } else {
-          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('pablo'));
+          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'));
         }
 
         if (vozSeleccionada) {
