@@ -20,7 +20,7 @@
       <span class="text-[10px] text-slate-400 font-mono">v.1 1851</span>
     </div>
     <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Global</h1>
-    <p class="text-xs text-slate-400">Traductor simultáneo con pausas gramaticales</p>
+    <p class="text-xs text-slate-400">Traductor simultáneo ultra-rápido</p>
   </header>
 
   <!-- Controles de Configuración y Idioma -->
@@ -67,7 +67,7 @@
     </div>
 
     <div class="bg-slate-800/80 p-4 rounded-xl border border-cyan-500/30 shadow-lg shadow-cyan-500/10">
-      <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción simultánea (*insofacto*):</span>
+      <span class="text-xs text-cyan-400 uppercase tracking-wider font-semibold">Traducción inmediata (*insofacto*):</span>
       <p id="textoTraducido" class="text-xl text-cyan-200 mt-1 min-h-[3rem] font-medium">...</p>
     </div>
   </div>
@@ -97,7 +97,7 @@
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false;
+    recognition.continuous = true; // Mantiene el micrófono abierto de forma continua para charlas o canciones
     recognition.interimResults = true; 
     recognition.lang = ''; 
 
@@ -109,17 +109,23 @@
     const selectGenero = document.getElementById('generoVoz');
 
     let ultimoTextoTraducido = "";
+    let isListening = false;
 
     btnHablar.addEventListener('click', () => {
       try {
-        recognition.start();
+        if (!isListening) {
+          recognition.start();
+        } else {
+          recognition.stop();
+        }
       } catch (e) {
         recognition.stop();
       }
     });
 
     recognition.onstart = () => {
-      estadoMic.innerText = "Escuchando en vivo...";
+      isListening = true;
+      estadoMic.innerText = "Escuchando en vivo (Toca para detener)...";
       btnHablar.classList.add('bg-red-500', 'shadow-red-500/30');
       btnHablar.classList.remove('bg-cyan-500', 'shadow-cyan-500/30');
     };
@@ -151,12 +157,13 @@
         
         textoTraducido.innerText = traduccion;
 
-        if (textoFinal && traduccion !== ultimoTextoTraducido) {
+        // Dispara la voz de manera inmediata al haber cambios consistentes en la traducción
+        if (traduccion && traduccion !== ultimoTextoTraducido && traduccion.length > 2) {
           ultimoTextoTraducido = traduccion;
           reproducirVoz(traduccion, selectDestino.value, selectGenero.value);
         }
       } catch (error) {
-        textoTraducido.innerText = "Traduciendo en vivo...";
+        textoTraducido.innerText = "Traduciendo insofacto...";
       }
     };
 
@@ -166,16 +173,21 @@
     };
 
     recognition.onend = () => {
+      isListening = false;
       resetUI();
     };
 
     function resetUI() {
+      isListening = false;
       estadoMic.innerText = "Presiona para hablar";
       btnHablar.classList.remove('bg-red-500', 'shadow-red-500/30');
       btnHablar.classList.add('bg-cyan-500', 'shadow-cyan-500/30');
     }
 
     function reproducirVoz(texto, lang, genero) {
+      // Limpia cualquier audio anterior para evitar retrasos acumulados en tiempo real
+      window.speechSynthesis.cancel();
+
       let textoConPausas = texto
         .replace(/,/g, ', ...')       
         .replace(/\./g, '. ......')   
