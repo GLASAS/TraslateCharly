@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Traductor Profesional Multi-API</title>
+  <title>Traductor Profesional Web</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col justify-between p-4">
@@ -13,10 +13,10 @@
       <span id="estadoCarga" class="text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full font-medium">
         ⏳ Cargando app...
       </span>
-      <span class="text-[10px] text-slate-400 font-mono">v.1 2010</span>
+      <span class="text-[10px] text-slate-400 font-mono">v.1 2025</span>
     </div>
-    <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Pro</h1>
-    <p class="text-xs text-slate-400">Traducción robusta multi-motor</p>
+    <h1 class="text-2xl font-bold text-cyan-400">🎙️ VoiceChat Web Pro</h1>
+    <p class="text-xs text-slate-400">Traducción online estable y altavoz</p>
   </header>
 
   <div class="bg-slate-800 p-4 rounded-xl shadow-lg flex flex-col gap-3 max-w-md mx-auto w-full">
@@ -83,7 +83,7 @@
     window.addEventListener('DOMContentLoaded', () => {
       const etiquetaCarga = document.getElementById('estadoCarga');
       etiquetaCarga.className = "text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-medium";
-      etiquetaCarga.innerText = "🟢 Sistema Multi-API Listo";
+      etiquetaCarga.innerText = "🟢 Sistema Online Listo";
     });
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -95,7 +95,7 @@
     const recognition = new SpeechRecognition();
     recognition.continuous = false; 
     recognition.interimResults = false; 
-    recognition.lang = 'es-ES'; 
+    recognition.lang = 'es-ES'; // Forzar entrada estrictamente en español
 
     const btnHablar = document.getElementById('btnHablar');
     const btnAltavoz = document.getElementById('btnAltavoz');
@@ -130,59 +130,30 @@
       const destino = selectDestino.value;
       textoTraducido.innerText = "Traduciendo...";
 
-      // Estrategia Multi-API con Respaldo Automático (Failover)
-      let traduccionExito = await traducirConRespaldo(texto, 'es', destino);
-      textoTraducido.innerText = traduccionExito;
-      ultimaTraduccionCache = traduccionExito;
-    };
-
-    // Función Inteligente con Múltiples Motores Gratuitos
-    async function traducirConRespaldo(texto, origen, destino) {
-      // Intento 1: LibreTranslate (Instancia pública abierta)
       try {
-        const res1 = await fetch("https://libretranslate.de/translate", {
-          method: "POST",
-          body: JSON.stringify({ q: texto, source: origen, target: destino, format: "text" }),
-          headers: { "Content-Type": "application/json" }
-        });
-        const data1 = await res1.json();
-        if (data1 && data1.translatedText) {
-          return data1.translatedText;
-        }
-      } catch (e) {
-        // Si falla la primera, pasa al respaldo
-      }
+        // Petición HTTP directa optimizada para asegurar la traducción
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=es|${destino}`;
+        const response = await fetch(url);
+        const data = await response.json();
 
-      // Intento 2: MyMemory (Como respaldo secundario)
-      try {
-        const res2 = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(texto)}&langpair=${origen}|${destino}`);
-        const data2 = await res2.json();
-        if (data2 && data2.responseData && data2.responseData.translatedText) {
-          const t = data2.responseData.translatedText;
-          if (!t.includes("MYMEMORY WARNING")) {
-            return t;
+        if (data && data.responseData && data.responseData.translatedText) {
+          let traduccion = data.responseData.translatedText;
+          
+          // Validación para descartar avisos de límite de la API y mostrar un texto claro
+          if (traduccion.includes("MYMEMORY WARNING")) {
+            textoTraducido.innerText = "⚠️ Límite temporal de API alcanzado. Espera un momento.";
+            return;
           }
+
+          textoTraducido.innerText = traduccion;
+          ultimaTraduccionCache = traduccion;
+        } else {
+          textoTraducido.innerText = "No se pudo traducir. Intenta de nuevo.";
         }
-      } catch (e) {
-        // Falla el respaldo secundario
+      } catch (error) {
+        textoTraducido.innerText = "Error de conexión con el servidor.";
       }
-
-      // Intento 3: Diccionario de emergencia local integrado por si ambos fallan o no hay red
-      return traducirOfflineEmergencia(texto, destino);
-    }
-
-    function traducirOfflineEmergencia(texto, idiomaDestino) {
-      const t = texto.toLowerCase().trim();
-      const diccionario = {
-        'en': { 'hola': 'Hello', 'cómo estás': 'How are you?', 'gracias': 'Thank you', 'por favor': 'Please', 'buenos días': 'Good morning' },
-        'fr': { 'hola': 'Bonjour', 'gracias': 'Merci', 'por favor': 'S\'il vous plaît' },
-        'pt': { 'hola': 'Olá', 'gracias': 'Obrigado', 'por favor': 'Por favor' }
-      };
-      if (diccionario[idiomaDestino] && diccionario[idiomaDestino][t]) {
-        return diccionario[idiomaDestino][t];
-      }
-      return `[Modo Offline/Límite] ${texto}`;
-    }
+    };
 
     recognition.onerror = () => {
       estadoMic.innerText = "Intenta de nuevo.";
@@ -194,7 +165,6 @@
     };
 
     function resetUI() {
-      isListening = false;
       estadoMic.innerText = "Presiona para hablar";
       btnHablar.classList.remove('bg-red-500', 'shadow-red-500/30');
       btnHablar.classList.add('bg-cyan-500', 'shadow-cyan-500/30');
@@ -221,7 +191,12 @@
       
       const langMap = { 'en': 'en-US', 'es': 'es-ES', 'fr': 'fr-FR', 'pt': 'pt-BR', 'it': 'it-IT' };
       utterance.lang = langMap[lang] || 'en-US';
-      utterance.rate = (lang === 'es') ? 0.6 : 0.45;
+
+      if (lang === 'es') {
+        utterance.rate = 0.6; 
+      } else {
+        utterance.rate = 0.45; 
+      }
 
       const voces = window.speechSynthesis.getVoices();
       if (voces.length > 0) {
@@ -229,9 +204,9 @@
         let vozSeleccionada = null;
 
         if (genero === 'female') {
-          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('google'));
+          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('helena'));
         } else {
-          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david'));
+          vozSeleccionada = vocesIdioma.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('pablo'));
         }
 
         if (vozSeleccionada) {
